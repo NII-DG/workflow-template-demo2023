@@ -106,7 +106,7 @@ def generate_svg_diag(
         dir_util='WORKFLOWS/FLOW/util',
         dir_01='WORKFLOWS/FLOW/01_preparation_phase',
         dir_02='WORKFLOWS/FLOW/02_experimental_phase',
-        dir_03='WORKFLOWS/FLOW/03_after_research_phase',
+        dir_03='WORKFLOWS/FLOW/03_after_experiments_phase',
         font='.fonts/ipag.ttf',
 ):
     with TemporaryDirectory() as workdir:
