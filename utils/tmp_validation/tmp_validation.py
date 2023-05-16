@@ -5,6 +5,13 @@ import os
 import subprocess
 import shutil
 import json
+from IPython.display import display, HTML, clear_output
+import ipywidgets as widgets
+import requests
+from urllib import parse
+import time
+import logging
+import re
 
 TMP_VALIDATION_PATH = '.tmp/validation'
 VALIDATION_RESULTS_PATH = 'validation_results'
@@ -128,3 +135,92 @@ def delete_verification_results_and_request_id():
     request_id_file_path = fetch_request_id_file_path()
     if os.path.exists(request_id_file_path):
         os.remove(request_id_file_path)
+
+def on_click_callback(clicked_button: widgets.Button) -> None:
+    clear_output()
+    print('検証結果の出力を削除しました。\n再度確認したい場合は、次のセルを実行する前にこのセルを再実行してください。')
+
+def show_results():
+    logging.error('検証の結果、メタデータに以下の不備が見つかりました。確認後、「確認を完了する」ボタンをクリックして次にお進みください。'\
+                  '\n「確認を完了する」ボタンがクリックされていない場合は、検証結果を含んだこのノートブックがリポジトリに同期されます。')
+    result_file_path = fetch_validation_results_file_path()
+    # 検証結果を表示する
+    with open ('/home/jovyan/' + result_file_path) as f:
+        results_file = json.load(f)
+    print(json.dumps(results_file, indent=2))
+    for i in results_file:
+        if 'Please check the log of the workflow execution using GET' in i['reason']:
+            log_url = re.findall('http?://[\w/:%#\$&\?\(\)~\.=\+\-]+', i['reason'])[0]
+            run_id = log_url.split('/')[-1]
+            response = requests.get(log_url)
+            log = response.json()
+            print('\n========== ' + log_url + ' より取得した実行ログは以下です。==========\n')
+            print(json.dumps(log, indent=2))
+            # 実行ログをresults.jsonに追記する
+            log_dict = {'workflow-log-' + run_id: log}
+            save_dict = [results_file, log_dict]
+            with open ('/home/jovyan/' + result_file_path, 'w') as f:
+                json.dump(save_dict, f,indent=2)
+                
+    button = widgets.Button(description='確認を完了する')
+    button.on_click(on_click_callback)
+    display(button)
+
+def get_validation_results():
+    request_id = get_request_id()
+    counter = 7
+    while counter >0:
+        try:
+            # generate url_for_get_validation_results
+            url_for_get_validation_results = parse.urlunparse((
+                'http',
+                'dg02.dg.rcos.nii.ac.jp:443', 
+                request_id,
+                '',
+                '',
+                ''
+            ))
+            # request get validation results
+            response = requests.get(url_for_get_validation_results)
+            result = response.json()
+            counter -= 1
+            clear_output()
+        except Exception as e:
+            logging.error('検証サービスに接続できません。')
+            logging.error(str(e))
+            break
+        else:
+            if response.status_code == requests.codes.ok:
+                status = result['status']
+                if status == 'UNKNOWN':
+                    logging.error('リクエストID：' + request_id + 'の状況が読み込めませんでした。')
+                    break
+                elif any([status == 'QUEUED', status == 'RUNNING']):
+                    print('リクエストID：' + request_id + 'は検証完了していません。時間をおいて再度確認します。')
+                    time.sleep(10)
+                    continue
+                elif status == 'COMPLETE':
+                    save_verification_results(result)
+                    print('すべてのメタデータは適切に管理されています。次にお進みください。')
+                    break
+                elif status == 'FAILED':
+                    save_verification_results(result)
+                    show_results()
+                    break
+                elif status == 'EXECUTOR_ERROR':
+                    logging.error('正常に検証を実行できませんでした。')
+                    break
+                elif status == 'CANCELING':
+                    print('リクエストID：' + request_id + 'は現在キャンセル中です。')
+                    break
+                elif status == 'CANCELED':
+                    print('リクエストID：' + request_id + 'はキャンセルされました。')
+                    break
+
+            elif response.ok == False:
+                logging.error('異常が発生しました。担当者にお問い合わせください。')
+                logging.error(result['message'])
+                        
+    else:
+        clear_output()
+        logging.error('検証に時間がかかっています。時間をおいて再度このセルを実行してください。')
