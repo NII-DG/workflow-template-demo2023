@@ -141,7 +141,7 @@ def on_click_callback(clicked_button: widgets.Button) -> None:
     print('検証結果の出力を削除しました。\n再度確認したい場合は、次のセルを実行する前にこのセルを再実行してください。')
 
 def show_results():
-    logging.error('検証の結果、メタデータに以下の不備が見つかりました。確認後、「確認を完了する」ボタンをクリックして次にお進みください。'\
+    logging.error('再現性が検証されませんでした。確認後、「確認を完了する」ボタンをクリックして次にお進みください。'\
                   '\n「確認を完了する」ボタンがクリックされていない場合は、検証結果を含んだこのノートブックがリポジトリに同期されます。')
     result_file_path = fetch_validation_results_file_path()
     # 検証結果を表示する
@@ -201,7 +201,7 @@ def get_validation_results():
                     continue
                 elif status == 'COMPLETE':
                     save_verification_results(result)
-                    print('すべてのメタデータは適切に管理されています。次にお進みください。')
+                    print('再現性が検証されました。次にお進みください。')
                     break
                 elif status == 'FAILED':
                     save_verification_results(result)
