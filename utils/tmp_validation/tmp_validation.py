@@ -154,7 +154,7 @@ def show_results():
             run_id = log_url.split('/')[-1]
             response = requests.get(log_url)
             log = response.json()
-            print('\n========== ' + log_url + ' より取得した実行ログは以下です。==========\n')
+            print('\n===== ' + log_url + ' より取得した実行ログは以下です。=====\n')
             print(json.dumps(log, indent=2))
             # 実行ログをresults.jsonに追記する
             log_dict = {'workflow-log-' + run_id: log}
