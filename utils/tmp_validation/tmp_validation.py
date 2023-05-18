@@ -154,10 +154,11 @@ def show_results():
             run_id = log_url.split('/')[-1]
             response = requests.get(log_url)
             log = response.json()
-            print('\n===== ' + log_url + ' より取得した実行ログは以下です。=====\n')
-            print(json.dumps(log, indent=2))
+            print('\n===== ' + log_url + ' より取得した実行エラーは以下です。=====\n')
+            stderr = log['run_log']['stderr']
+            print(stderr)
             # 実行ログをresults.jsonに追記する
-            log_dict = {'workflow-log-' + run_id: log}
+            log_dict = {'workflow-stderr-' + run_id: stderr}
             save_dict = [results_file, log_dict]
             with open ('/home/jovyan/' + result_file_path, 'w') as f:
                 json.dump(save_dict, f,indent=2)
